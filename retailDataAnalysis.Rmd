@@ -1,0 +1,291 @@
+---
+title: "Retail Data Analysis"
+author: "Deo Ivan Mareza"
+date: "1/16/2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_section: true
+    toc_float:
+      collapsed: true
+    highlight: breezedark
+    theme: cerulean
+    
+---
+
+```{r setup, include=FALSE}
+library(GGally)
+library(dplyr)
+
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Brief Summary
+
+Hello and welcome to my training R document. In this document, I will try to analyze a retail data of a company, and see what kind of conclusion and business insight we might have.
+
+The main objective of this document is to practise and sharpen my R command, as well compare data and get some insights on the given data.
+
+# The Data
+
+```{r}
+# data set
+
+retail <- read.csv(file="data_input/retail.csv")
+
+
+```
+
+
+This is the first look of the data that we received.
+
+The only cleanup we need is to change some factors to characters, and removing some columns that we don't need.
+
+
+
+```{r echo=TRUE}
+
+head(retail)
+
+```
+
+# Data Cleanup
+
+At this stage, there's a few things that I'd like to do, which is : 
+*1. Remove Row.ID, Order.ID, and Customer.ID*
+*2. Fix data type*
+
+```{r echo=TRUE}
+
+# retail <- read.csv(file="data_input/retail.csv")
+
+
+colnames(retail)
+
+retail <- retail[,-c(1,2,6)]
+# retail <- retail[,-"Customer.ID"]
+
+```
+
+```{r echo=TRUE}
+
+retail$Order.Date <- as.Date(retail$Order.Date, "%m/%d/%y")
+retail$Ship.Date <- as.Date(retail$Ship.Date, "%m/%d/%y")
+
+
+retail$Product.ID <- as.character(retail$Product.ID)
+retail$Product.Name <- as.factor(retail$Product.Name)
+
+
+str(retail)
+
+```
+
+Now that we have removed the columns we do not need as well as making sure all the data types are correct, we're ready to begin the analysis. 
+
+
+
+# Data Analysis
+
+The data provided is a sales data within the period of 3rd January 2014 to 30th December 2017.
+
+```{r echo = TRUE}
+
+min(retail$Order.Date)
+max(retail$Order.Date)
+
+
+```
+
+## TOP 10
+
+
+
+**Top 10 Products based on Quantity :**
+
+
+```{r echo = TRUE}
+
+productSoldQty <- aggregate(formula = Quantity ~ Product.Name, data = retail, FUN = max)
+
+productSoldQty[order(productSoldQty$Quantity, decreasing = T),][1:10,]
+
+```
+
+
+**Top 10 Most Profitable Product :**
+
+
+
+Using aggregates to count the max profit
+
+
+```{r}
+
+agg1 <- aggregate(formula = Profit ~ Product.Name, data = retail, FUN = max )
+
+agg1[order(agg1$Profit, decreasing=TRUE),][1:10,]
+
+
+```
+
+
+In addition, Canon imageClass 2200 is sold for 20 units.
+
+```{r echo=TRUE}
+
+canonImageClass <- retail[grep("Canon imageCLASS 2200", retail$Product.Name),]
+
+sum(canonImageClass$Quantity)
+
+
+```
+
+
+
+
+**Top 10 Most UNProfitable Product :**
+
+
+```{r echo=TRUE}
+
+agg2 <- aggregate(formula = Profit ~ Product.Name, data = retail, FUN = min )
+
+agg2[order(agg2$Profit),][1:10,]
+
+
+```
+
+
+## Most Profitable Segment
+
+
+**A comparison on Profit and Quantity Sold based on consumer segments** 
+
+```{r}
+
+agg3 <-  aggregate(formula = cbind(Profit, Quantity) ~ Segment, data = retail, FUN = sum)
+
+agg3[order(agg3$Profit, decreasing = T),]
+
+
+```
+
+
+
+
+
+## Preferrable Shipping Mode based on Segment
+
+
+Total of Shipping Mode chosen : 
+
+```{r echo=T}
+
+# table(retail$Ship.Mode, retail$Segment)
+
+agg4 <- aggregate (formula = Quantity ~ Ship.Mode, data = retail, FUN = sum)
+
+agg4[order(agg4$Quantity, decreasing = T),]
+
+```
+
+Shipping Mode based on Segment : 
+
+```{r}
+
+table(retail$Ship.Mode, retail$Segment)
+
+```
+
+
+
+## Shipping Profitability
+
+
+**Analyzing different shipping options profitability**
+
+```{r echo=T}
+
+correlation2 <- cbind.data.frame(retail$Ship.Mode, retail$Profit)
+
+# ggcorr(data = correlation2, label = 1)
+aggregate(formula = Quantity ~ Ship.Mode, data = retail, FUN = sum)
+aggregate(formula = Profit ~ Ship.Mode, data = retail, FUN = sum)
+
+ggpairs(retail, columns = c("Ship.Mode", "Profit"),ggplot2::aes(colour="species"))
+
+```
+
+
+
+## Discount Effectiveness
+
+
+**Just how effective is the discount promotion?**
+
+```{r echo = TRUE}
+
+cor(retail$Discount, retail$Sales)
+cor(retail$Discount,retail$Profit)
+
+```
+
+
+**Correlation on Discount, Sales, Quantity, and Profits**
+
+```{r echo=TRUE}
+
+
+
+correlation1 <- cbind.data.frame(retail$Discount, retail$Sales, retail$Quantity, retail$Profit)
+
+ggcorr(data = correlation1, label = 1)
+
+```
+
+```{r echo=T}
+
+
+ggpairs(retail, columns = c("Discount", "Profit"))
+
+```
+
+```{r}
+
+
+
+```
+
+
+
+
+
+## Sales and Profit Scatterplot
+
+
+**Correlation on Sales and Profit**
+
+```{r echo=T}
+
+
+ggpairs(retail, columns = c("Sales", "Profit"))
+
+
+```
+
+
+
+# Data Conclusion
+
+There's a few things that we can conclude from the short analysis above :
+  *The business should consider to stop selling Cubify CubeX 3D Printer Double Head Print
+  *Based on correlation analysis between discount to sales as well as discount to profits, it doesn't seem that the discount is effective in increasing sales.
+  *After analyzing Sales and Profit scatter plot, it seemed that there's a cluster in a low performing number, where sales and profit are close to 0. The company should revise their pricing strategy.
+  *It seemed that the standard class shipping mode has the biggest profit, as well as the preferred shipping mode for a lot of the customers.
+  *Consumer segment seemd to yield most profit and the most sale. This may be a good insight for the marketing or sales team.
+  
+  
+  
